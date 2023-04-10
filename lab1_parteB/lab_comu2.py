@@ -25,8 +25,9 @@ from PyQt5 import Qt
 from gnuradio import qtgui
 from gnuradio.filter import firdes
 import sip
-from gnuradio import analog
+from gnuradio import audio
 from gnuradio import blocks
+from gnuradio import filter
 from gnuradio import gr
 from gnuradio.fft import window
 import sys
@@ -77,21 +78,23 @@ class lab_comu2(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
-        self.samp_rate = samp_rate = 10000
-        self.freq = freq = 2000
+        self.samp_rate = samp_rate = 200000
+        self.audio_rate = audio_rate = 48000
 
         ##################################################
         # Blocks
         ##################################################
 
-        self._samp_rate_range = Range(1000, 80000, 1000, 10000, 200)
+        self._samp_rate_range = Range(1000, 300000, 1000, 200000, 200)
         self._samp_rate_win = RangeWidget(self._samp_rate_range, self.set_samp_rate, "frecuencia de muestreo", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._samp_rate_win)
-        self._freq_range = Range(1000, 40000, 1000, 2000, 200)
-        self._freq_win = RangeWidget(self._freq_range, self.set_freq, "Frequency", "counter_slider", float, QtCore.Qt.Horizontal)
-        self.top_layout.addWidget(self._freq_win)
+        self.rational_resampler_xxx_0 = filter.rational_resampler_fff(
+                interpolation=1,
+                decimation=1,
+                taps=[],
+                fractional_bw=0)
         self.qtgui_time_sink_x_0 = qtgui.time_sink_f(
-            128, #size
+            1024, #size
             samp_rate, #samp_rate
             "", #name
             1, #number of inputs
@@ -139,7 +142,7 @@ class lab_comu2(gr.top_block, Qt.QWidget):
         self._qtgui_time_sink_x_0_win = sip.wrapinstance(self.qtgui_time_sink_x_0.qwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_time_sink_x_0_win)
         self.qtgui_freq_sink_x_0 = qtgui.freq_sink_f(
-            2048, #size
+            1024, #size
             window.WIN_BLACKMAN_hARRIS, #wintype
             0, #fc
             samp_rate, #bw
@@ -182,15 +185,20 @@ class lab_comu2(gr.top_block, Qt.QWidget):
         self._qtgui_freq_sink_x_0_win = sip.wrapinstance(self.qtgui_freq_sink_x_0.qwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_freq_sink_x_0_win)
         self.blocks_throttle_0 = blocks.throttle(gr.sizeof_float*1, samp_rate,True)
-        self.analog_sig_source_x_0 = analog.sig_source_f(samp_rate, analog.GR_TRI_WAVE, freq, 1, 0, 0)
+        self.blocks_multiply_const_vxx_0 = blocks.multiply_const_ff(1)
+        self.audio_sink_0 = audio.sink(48000, '', True)
+        self.Prueba = blocks.wavfile_source('/home/labcom/Documentos/lab_comu_J1E_G4/lab1_parteB/Audio_de_prueba.wav', True)
 
 
         ##################################################
         # Connections
         ##################################################
-        self.connect((self.analog_sig_source_x_0, 0), (self.blocks_throttle_0, 0))
+        self.connect((self.Prueba, 0), (self.blocks_multiply_const_vxx_0, 0))
+        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.rational_resampler_xxx_0, 0))
+        self.connect((self.blocks_throttle_0, 0), (self.audio_sink_0, 0))
         self.connect((self.blocks_throttle_0, 0), (self.qtgui_freq_sink_x_0, 0))
         self.connect((self.blocks_throttle_0, 0), (self.qtgui_time_sink_x_0, 0))
+        self.connect((self.rational_resampler_xxx_0, 0), (self.blocks_throttle_0, 0))
 
 
     def closeEvent(self, event):
@@ -206,17 +214,15 @@ class lab_comu2(gr.top_block, Qt.QWidget):
 
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
-        self.analog_sig_source_x_0.set_sampling_freq(self.samp_rate)
         self.blocks_throttle_0.set_sample_rate(self.samp_rate)
         self.qtgui_freq_sink_x_0.set_frequency_range(0, self.samp_rate)
         self.qtgui_time_sink_x_0.set_samp_rate(self.samp_rate)
 
-    def get_freq(self):
-        return self.freq
+    def get_audio_rate(self):
+        return self.audio_rate
 
-    def set_freq(self, freq):
-        self.freq = freq
-        self.analog_sig_source_x_0.set_frequency(self.freq)
+    def set_audio_rate(self, audio_rate):
+        self.audio_rate = audio_rate
 
 
 

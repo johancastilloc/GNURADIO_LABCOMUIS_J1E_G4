@@ -55,24 +55,15 @@ blocks:
     rotation: 0
     state: true
 - name: samp_rate
-  id: variable_qtgui_range
+  id: variable
   parameters:
     comment: ''
-    gui_hint: ''
-    label: frecuencia de muestreo
-    min_len: '200'
-    orient: QtCore.Qt.Horizontal
-    rangeType: float
-    start: '1000'
-    step: '1000'
-    stop: '80000'
-    value: '10000'
-    widget: counter_slider
+    value: '32000'
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [552, 92.0]
+    coordinate: [264, 100.0]
     rotation: 0
     state: true
 - name: analog_sig_source_x_0
