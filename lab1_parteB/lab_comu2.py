@@ -90,7 +90,7 @@ class lab_comu2(gr.top_block, Qt.QWidget):
         self.top_layout.addWidget(self._samp_rate_win)
         self.rational_resampler_xxx_0 = filter.rational_resampler_fff(
                 interpolation=1,
-                decimation=1,
+                decimation=10,
                 taps=[],
                 fractional_bw=0)
         self.qtgui_time_sink_x_0 = qtgui.time_sink_f(
