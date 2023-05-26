@@ -25,13 +25,13 @@ import os
 import sys
 sys.path.append(os.environ.get('GRC_HIER_PATH', os.path.expanduser('~/.grc_gnuradio')))
 
-from ModuladorAM_J1E import ModuladorAM_J1E  # grc-generated hier_block
+from Envolvente_compleja import Envolvente_compleja  # grc-generated hier_block
 from PyQt5 import Qt
 from gnuradio import qtgui
 from gnuradio.filter import firdes
 import sip
-from gnuradio import analog
 from gnuradio import blocks
+from gnuradio import filter
 from gnuradio import gr
 from gnuradio.fft import window
 import signal
@@ -84,34 +84,35 @@ class moduladoramplitudMJ(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
-        self.samp_rate = samp_rate = 12500000/64
-        self.ka = ka = 1
+        self.samp_rate = samp_rate = 200000
         self.fm = fm = 1000
         self.fc = fc = 50e6
+        self.K = K = 1
         self.GTX = GTX = 0
-        self.Am = Am = 0.25
-        self.Ac = Ac = 0.25
+        self.B = B = 1
+        self.Am = Am = 1
+        self.Ac = Ac = 125e-3
 
         ##################################################
         # Blocks
         ##################################################
 
-        self._ka_range = Range(-4, 4, 0.01, 1, 200)
-        self._ka_win = RangeWidget(self._ka_range, self.set_ka, "Coeficiente de sensibilidad AM", "counter_slider", float, QtCore.Qt.Horizontal)
-        self.top_layout.addWidget(self._ka_win)
-        self._fm_range = Range(0, 20000, 100, 1000, 200)
-        self._fm_win = RangeWidget(self._fm_range, self.set_fm, "Frecuencia mensaje", "counter_slider", float, QtCore.Qt.Horizontal)
-        self.top_layout.addWidget(self._fm_win)
+        self._samp_rate_range = Range(0, 300000, 1, 200000, 200)
+        self._samp_rate_win = RangeWidget(self._samp_rate_range, self.set_samp_rate, "samp_rate", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_layout.addWidget(self._samp_rate_win)
         self._fc_range = Range(50e6, 2.2e9, 1e6, 50e6, 200)
         self._fc_win = RangeWidget(self._fc_range, self.set_fc, "Frecuencia portadora", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._fc_win)
-        self._GTX_range = Range(0, 31, 1, 0, 200)
+        self._K_range = Range(0, 1, 1, 1, 200)
+        self._K_win = RangeWidget(self._K_range, self.set_K, "habilita portadora", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_layout.addWidget(self._K_win)
+        self._GTX_range = Range(0, 30, 1, 0, 200)
         self._GTX_win = RangeWidget(self._GTX_range, self.set_GTX, "Ganancia TX", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._GTX_win)
-        self._Am_range = Range(0, 5, 0.01, 0.25, 200)
-        self._Am_win = RangeWidget(self._Am_range, self.set_Am, "Amplitud mensaje", "counter_slider", float, QtCore.Qt.Horizontal)
-        self.top_layout.addWidget(self._Am_win)
-        self._Ac_range = Range(0, 0.5, 0.01, 0.25, 200)
+        self._B_range = Range(-1, 1, 2, 1, 200)
+        self._B_win = RangeWidget(self._B_range, self.set_B, "Cambio de banda", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_layout.addWidget(self._B_win)
+        self._Ac_range = Range(0, 1, 1e-3, 125e-3, 200)
         self._Ac_win = RangeWidget(self._Ac_range, self.set_Ac, "Amplitud portadora", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._Ac_win)
         self.uhd_usrp_sink_0 = uhd.usrp_sink(
@@ -129,6 +130,11 @@ class moduladoramplitudMJ(gr.top_block, Qt.QWidget):
         self.uhd_usrp_sink_0.set_center_freq(fc, 0)
         self.uhd_usrp_sink_0.set_antenna("TX/RX", 0)
         self.uhd_usrp_sink_0.set_gain(GTX, 0)
+        self.rational_resampler_xxx_0 = filter.rational_resampler_fff(
+                interpolation=samp_rate,
+                decimation=48000,
+                taps=[],
+                fractional_bw=0)
         self.qtgui_time_sink_x_0 = qtgui.time_sink_c(
             1024, #size
             samp_rate, #samp_rate
@@ -143,7 +149,7 @@ class moduladoramplitudMJ(gr.top_block, Qt.QWidget):
 
         self.qtgui_time_sink_x_0.enable_tags(True)
         self.qtgui_time_sink_x_0.set_trigger_mode(qtgui.TRIG_MODE_FREE, qtgui.TRIG_SLOPE_POS, 0.0, 0, 0, "")
-        self.qtgui_time_sink_x_0.enable_autoscale(False)
+        self.qtgui_time_sink_x_0.enable_autoscale(True)
         self.qtgui_time_sink_x_0.enable_grid(False)
         self.qtgui_time_sink_x_0.enable_axis_labels(True)
         self.qtgui_time_sink_x_0.enable_control_panel(False)
@@ -181,7 +187,7 @@ class moduladoramplitudMJ(gr.top_block, Qt.QWidget):
         self._qtgui_time_sink_x_0_win = sip.wrapinstance(self.qtgui_time_sink_x_0.qwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_time_sink_x_0_win)
         self.qtgui_freq_sink_x_0 = qtgui.freq_sink_c(
-            16384, #size
+            1024, #size
             window.WIN_BLACKMAN_hARRIS, #wintype
             0, #fc
             samp_rate, #bw
@@ -227,23 +233,29 @@ class moduladoramplitudMJ(gr.top_block, Qt.QWidget):
         )
 
         self.top_layout.addWidget(self.practica3_0)
-        self.blocks_complex_to_real_0 = blocks.complex_to_real(1)
-        self.analog_sig_source_x_0 = analog.sig_source_f(samp_rate, analog.GR_COS_WAVE, fm, Am, 0, 0)
-        self.ModuladorAM_J1E_0 = ModuladorAM_J1E(
+        self._fm_range = Range(300, samp_rate/4, 100, 1000, 200)
+        self._fm_win = RangeWidget(self._fm_range, self.set_fm, "Frecuencia mensaje", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_layout.addWidget(self._fm_win)
+        self.blocks_wavfile_source_0 = blocks.wavfile_source('/home/labcom/Documentos/lab_comu_J1E_G4/lab1_parteB/Audio_de_prueba.wav', True)
+        self.Envolvente_compleja_0 = Envolvente_compleja(
             Ac=Ac,
-            ka=ka,
+            B=B,
+            K=K,
         )
+        self._Am_range = Range(0, 4, 100e-3, 1, 200)
+        self._Am_win = RangeWidget(self._Am_range, self.set_Am, "Amplitud mensaje", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_layout.addWidget(self._Am_win)
 
 
         ##################################################
         # Connections
         ##################################################
-        self.connect((self.ModuladorAM_J1E_0, 0), (self.blocks_complex_to_real_0, 0))
-        self.connect((self.ModuladorAM_J1E_0, 0), (self.qtgui_freq_sink_x_0, 0))
-        self.connect((self.ModuladorAM_J1E_0, 0), (self.qtgui_time_sink_x_0, 0))
-        self.connect((self.ModuladorAM_J1E_0, 0), (self.uhd_usrp_sink_0, 0))
-        self.connect((self.analog_sig_source_x_0, 0), (self.ModuladorAM_J1E_0, 0))
-        self.connect((self.blocks_complex_to_real_0, 0), (self.practica3_0, 0))
+        self.connect((self.Envolvente_compleja_0, 0), (self.qtgui_freq_sink_x_0, 0))
+        self.connect((self.Envolvente_compleja_0, 0), (self.qtgui_time_sink_x_0, 0))
+        self.connect((self.Envolvente_compleja_0, 0), (self.uhd_usrp_sink_0, 0))
+        self.connect((self.blocks_wavfile_source_0, 0), (self.rational_resampler_xxx_0, 0))
+        self.connect((self.rational_resampler_xxx_0, 0), (self.Envolvente_compleja_0, 0))
+        self.connect((self.rational_resampler_xxx_0, 0), (self.practica3_0, 0))
 
 
     def closeEvent(self, event):
@@ -259,24 +271,15 @@ class moduladoramplitudMJ(gr.top_block, Qt.QWidget):
 
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
-        self.analog_sig_source_x_0.set_sampling_freq(self.samp_rate)
         self.qtgui_freq_sink_x_0.set_frequency_range(0, self.samp_rate)
         self.qtgui_time_sink_x_0.set_samp_rate(self.samp_rate)
         self.uhd_usrp_sink_0.set_samp_rate(self.samp_rate)
-
-    def get_ka(self):
-        return self.ka
-
-    def set_ka(self, ka):
-        self.ka = ka
-        self.ModuladorAM_J1E_0.set_ka(self.ka)
 
     def get_fm(self):
         return self.fm
 
     def set_fm(self, fm):
         self.fm = fm
-        self.analog_sig_source_x_0.set_frequency(self.fm)
 
     def get_fc(self):
         return self.fc
@@ -285,6 +288,13 @@ class moduladoramplitudMJ(gr.top_block, Qt.QWidget):
         self.fc = fc
         self.uhd_usrp_sink_0.set_center_freq(self.fc, 0)
 
+    def get_K(self):
+        return self.K
+
+    def set_K(self, K):
+        self.K = K
+        self.Envolvente_compleja_0.set_K(self.K)
+
     def get_GTX(self):
         return self.GTX
 
@@ -292,19 +302,25 @@ class moduladoramplitudMJ(gr.top_block, Qt.QWidget):
         self.GTX = GTX
         self.uhd_usrp_sink_0.set_gain(self.GTX, 0)
 
+    def get_B(self):
+        return self.B
+
+    def set_B(self, B):
+        self.B = B
+        self.Envolvente_compleja_0.set_B(self.B)
+
     def get_Am(self):
         return self.Am
 
     def set_Am(self, Am):
         self.Am = Am
-        self.analog_sig_source_x_0.set_amplitude(self.Am)
 
     def get_Ac(self):
         return self.Ac
 
     def set_Ac(self, Ac):
         self.Ac = Ac
-        self.ModuladorAM_J1E_0.set_Ac(self.Ac)
+        self.Envolvente_compleja_0.set_Ac(self.Ac)
 
 
 
