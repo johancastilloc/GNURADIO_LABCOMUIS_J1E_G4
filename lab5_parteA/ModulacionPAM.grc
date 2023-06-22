@@ -2,7 +2,7 @@ options:
   parameters:
     author: MJ
     catch_exceptions: 'True'
-    category: '[Modulo_J1EG4]'
+    category: '[Modulos_J1EG4]'
     cmake_opt: ''
     comment: ''
     copyright: UIS
@@ -78,7 +78,7 @@ blocks:
     affinity: ''
     alias: ''
     comment: ''
-    delay: '0'
+    delay: 50-D
     maxoutbuf: '0'
     minoutbuf: '0'
     num_ports: '1'
