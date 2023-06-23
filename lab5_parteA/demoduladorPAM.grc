@@ -159,6 +159,27 @@ blocks:
     coordinate: [1288, 12.0]
     rotation: 0
     state: true
+- name: D5
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: ''
+    label: Retardo audio
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '0'
+    step: '1'
+    stop: '100'
+    value: '0'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [368, 172.0]
+    rotation: 0
+    state: true
 - name: fm
   id: variable_qtgui_range
   parameters:
@@ -303,6 +324,24 @@ blocks:
     coordinate: [488, 868.0]
     rotation: 0
     state: true
+- name: ModulacionPAM_0_2_0
+  id: ModulacionPAM
+  parameters:
+    D: D
+    affinity: ''
+    alias: ''
+    comment: ''
+    fs: fs
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_rate: samp_rate
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [792, 1012.0]
+    rotation: 0
+    state: true
 - name: analog_sig_source_x_0
   id: analog_sig_source_x
   parameters:
@@ -399,7 +438,7 @@ blocks:
     comment: ''
     maxoutbuf: '0'
     minoutbuf: '0'
-    num_inputs: '4'
+    num_inputs: '5'
     type: float
     vlen: '1'
   states:
@@ -466,6 +505,25 @@ blocks:
     coordinate: [816, 880.0]
     rotation: 0
     state: true
+- name: blocks_delay_0_1_0
+  id: blocks_delay
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    delay: D5
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_ports: '1'
+    type: float
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1096, 1056.0]
+    rotation: 0
+    state: true
 - name: blocks_delay_1
   id: blocks_delay
   parameters:
@@ -483,6 +541,24 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [1416, 704.0]
+    rotation: 0
+    state: true
+- name: blocks_wavfile_source_0
+  id: blocks_wavfile_source
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    file: /home/labcom/Documentos/lab_comu_J1E_G4/lab1_parteB/Audio_de_prueba.wav
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    nchan: '1'
+    repeat: 'True'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [96, 1012.0]
     rotation: 0
     state: true
 - name: low_pass_filter_0
@@ -721,6 +797,26 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [2240, 596.0]
+    rotation: 0
+    state: true
+- name: rational_resampler_xxx_1
+  id: rational_resampler_xxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    decim: '48000'
+    fbw: '0'
+    interp: '200000'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    taps: '[]'
+    type: fff
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [424, 988.0]
     rotation: 0
     state: true
 - name: uhd_usrp_sink_0
@@ -1009,6 +1105,7 @@ connections:
 - [ModulacionPAM_0_1_0, '0', low_pass_filter_0, '0']
 - [ModulacionPAM_0_1_0, '0', qtgui_time_sink_x_1, '0']
 - [ModulacionPAM_0_2, '0', blocks_delay_0_1, '0']
+- [ModulacionPAM_0_2_0, '0', blocks_delay_0_1_0, '0']
 - [analog_sig_source_x_0, '0', ModulacionPAM_0, '0']
 - [analog_sig_source_x_0_0, '0', ModulacionPAM_0_0, '0']
 - [analog_sig_source_x_0_1, '0', ModulacionPAM_0_1, '0']
@@ -1021,10 +1118,13 @@ connections:
 - [blocks_delay_0_0, '0', qtgui_time_sink_x_0, '2']
 - [blocks_delay_0_1, '0', blocks_add_xx_0, '3']
 - [blocks_delay_0_1, '0', qtgui_time_sink_x_0, '3']
+- [blocks_delay_0_1_0, '0', blocks_add_xx_0, '4']
 - [blocks_delay_1, '0', ModulacionPAM_0_1_0, '0']
+- [blocks_wavfile_source_0, '0', rational_resampler_xxx_1, '0']
 - [low_pass_filter_0, '0', qtgui_time_sink_x_1, '1']
 - [low_pass_filter_0, '0', rational_resampler_xxx_0, '0']
 - [rational_resampler_xxx_0, '0', uhd_usrp_sink_0, '0']
+- [rational_resampler_xxx_1, '0', ModulacionPAM_0_2_0, '0']
 
 metadata:
   file_format: 1

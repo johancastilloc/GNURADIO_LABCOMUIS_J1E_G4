@@ -87,6 +87,7 @@ class DemodularPAM(gr.top_block, Qt.QWidget):
         self.samp_rate = samp_rate = 100000
         self.fs = fs = 1000
         self.fm = fm = 100
+        self.D5 = D5 = 0
         self.D4 = D4 = 0
         self.D3 = D3 = 0
         self.D2 = D2 = 0
@@ -104,6 +105,9 @@ class DemodularPAM(gr.top_block, Qt.QWidget):
         self._fm_range = Range(0, 10000, 10, 100, 200)
         self._fm_win = RangeWidget(self._fm_range, self.set_fm, "frecuencia mensaje", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._fm_win)
+        self._D5_range = Range(0, 100, 1, 0, 200)
+        self._D5_win = RangeWidget(self._D5_range, self.set_D5, "Retardo audio", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_layout.addWidget(self._D5_win)
         self._D4_range = Range(0, 200, 1, 0, 200)
         self._D4_win = RangeWidget(self._D4_range, self.set_D4, "Seleccion señal RX", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_layout.addWidget(self._D4_win)
@@ -137,6 +141,11 @@ class DemodularPAM(gr.top_block, Qt.QWidget):
         self.uhd_usrp_sink_0.set_center_freq(50e6, 0)
         self.uhd_usrp_sink_0.set_antenna("TX/RX", 0)
         self.uhd_usrp_sink_0.set_gain(0, 0)
+        self.rational_resampler_xxx_1 = filter.rational_resampler_fff(
+                interpolation=200000,
+                decimation=48000,
+                taps=[],
+                fractional_bw=0)
         self.rational_resampler_xxx_0 = filter.rational_resampler_fcc(
                 interpolation=200000,
                 decimation=100000,
@@ -247,7 +256,9 @@ class DemodularPAM(gr.top_block, Qt.QWidget):
                 1000,
                 window.WIN_HAMMING,
                 6.76))
+        self.blocks_wavfile_source_0 = blocks.wavfile_source('/home/labcom/Documentos/lab_comu_J1E_G4/lab1_parteB/Audio_de_prueba.wav', True)
         self.blocks_delay_1 = blocks.delay(gr.sizeof_float*1, D4)
+        self.blocks_delay_0_1_0 = blocks.delay(gr.sizeof_float*1, D5)
         self.blocks_delay_0_1 = blocks.delay(gr.sizeof_float*1, D3)
         self.blocks_delay_0_0 = blocks.delay(gr.sizeof_float*1, D2)
         self.blocks_delay_0 = blocks.delay(gr.sizeof_float*1, D1)
@@ -256,6 +267,11 @@ class DemodularPAM(gr.top_block, Qt.QWidget):
         self.analog_sig_source_x_0_1 = analog.sig_source_f(samp_rate, analog.GR_SQR_WAVE, fm, Am, 0, 0)
         self.analog_sig_source_x_0_0 = analog.sig_source_f(samp_rate, analog.GR_TRI_WAVE, fm, Am, 0, 0)
         self.analog_sig_source_x_0 = analog.sig_source_f(samp_rate, analog.GR_COS_WAVE, fm, Am, 0, 0)
+        self.ModulacionPAM_0_2_0 = ModulacionPAM(
+            D=D,
+            fs=fs,
+            samp_rate=samp_rate,
+        )
         self.ModulacionPAM_0_2 = ModulacionPAM(
             D=D,
             fs=fs,
@@ -293,6 +309,7 @@ class DemodularPAM(gr.top_block, Qt.QWidget):
         self.connect((self.ModulacionPAM_0_1_0, 0), (self.low_pass_filter_0, 0))
         self.connect((self.ModulacionPAM_0_1_0, 0), (self.qtgui_time_sink_x_1, 0))
         self.connect((self.ModulacionPAM_0_2, 0), (self.blocks_delay_0_1, 0))
+        self.connect((self.ModulacionPAM_0_2_0, 0), (self.blocks_delay_0_1_0, 0))
         self.connect((self.analog_sig_source_x_0, 0), (self.ModulacionPAM_0, 0))
         self.connect((self.analog_sig_source_x_0_0, 0), (self.ModulacionPAM_0_0, 0))
         self.connect((self.analog_sig_source_x_0_1, 0), (self.ModulacionPAM_0_1, 0))
@@ -305,10 +322,13 @@ class DemodularPAM(gr.top_block, Qt.QWidget):
         self.connect((self.blocks_delay_0_0, 0), (self.qtgui_time_sink_x_0, 2))
         self.connect((self.blocks_delay_0_1, 0), (self.blocks_add_xx_0, 3))
         self.connect((self.blocks_delay_0_1, 0), (self.qtgui_time_sink_x_0, 3))
+        self.connect((self.blocks_delay_0_1_0, 0), (self.blocks_add_xx_0, 4))
         self.connect((self.blocks_delay_1, 0), (self.ModulacionPAM_0_1_0, 0))
+        self.connect((self.blocks_wavfile_source_0, 0), (self.rational_resampler_xxx_1, 0))
         self.connect((self.low_pass_filter_0, 0), (self.qtgui_time_sink_x_1, 1))
         self.connect((self.low_pass_filter_0, 0), (self.rational_resampler_xxx_0, 0))
         self.connect((self.rational_resampler_xxx_0, 0), (self.uhd_usrp_sink_0, 0))
+        self.connect((self.rational_resampler_xxx_1, 0), (self.ModulacionPAM_0_2_0, 0))
 
 
     def closeEvent(self, event):
@@ -329,6 +349,7 @@ class DemodularPAM(gr.top_block, Qt.QWidget):
         self.ModulacionPAM_0_1.set_samp_rate(self.samp_rate)
         self.ModulacionPAM_0_1_0.set_samp_rate(self.samp_rate)
         self.ModulacionPAM_0_2.set_samp_rate(self.samp_rate)
+        self.ModulacionPAM_0_2_0.set_samp_rate(self.samp_rate)
         self.analog_sig_source_x_0.set_sampling_freq(self.samp_rate)
         self.analog_sig_source_x_0_0.set_sampling_freq(self.samp_rate)
         self.analog_sig_source_x_0_1.set_sampling_freq(self.samp_rate)
@@ -348,6 +369,7 @@ class DemodularPAM(gr.top_block, Qt.QWidget):
         self.ModulacionPAM_0_1.set_fs(self.fs)
         self.ModulacionPAM_0_1_0.set_fs(self.fs)
         self.ModulacionPAM_0_2.set_fs(self.fs)
+        self.ModulacionPAM_0_2_0.set_fs(self.fs)
 
     def get_fm(self):
         return self.fm
@@ -358,6 +380,13 @@ class DemodularPAM(gr.top_block, Qt.QWidget):
         self.analog_sig_source_x_0_0.set_frequency(self.fm)
         self.analog_sig_source_x_0_1.set_frequency(self.fm)
         self.analog_sig_source_x_0_2.set_frequency(self.fm)
+
+    def get_D5(self):
+        return self.D5
+
+    def set_D5(self, D5):
+        self.D5 = D5
+        self.blocks_delay_0_1_0.set_dly(int(self.D5))
 
     def get_D4(self):
         return self.D4
@@ -397,6 +426,7 @@ class DemodularPAM(gr.top_block, Qt.QWidget):
         self.ModulacionPAM_0_1.set_D(self.D)
         self.ModulacionPAM_0_1_0.set_D(self.D)
         self.ModulacionPAM_0_2.set_D(self.D)
+        self.ModulacionPAM_0_2_0.set_D(self.D)
 
     def get_Am(self):
         return self.Am
